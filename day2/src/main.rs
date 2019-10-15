@@ -76,9 +76,7 @@ fn compare_ids(id1: &str, id2: &str) -> Option<String> {
         id1.chars()
             .zip(id2.chars())
             .filter(|(c1, c2)| c1 == c2)
-            .map(|(c1, _c2)| {
-                c1
-            })
+            .map(|(c1, _c2)| c1)
             .collect(),
     )
 }
