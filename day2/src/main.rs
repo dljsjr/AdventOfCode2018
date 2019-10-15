@@ -1,6 +1,6 @@
 use std::fs;
 
-type Result<T> = std::result::Result<T, Box<dyn ::std::error::Error>>;
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
     process_input_part_1("inputs/day2.txt")?;

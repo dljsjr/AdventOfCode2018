@@ -74,7 +74,7 @@ impl FromStr for Claim {
     }
 }
 
-type Result<T> = std::result::Result<T, Box<dyn ::std::error::Error>>;
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
     let contents = fs::read_to_string("inputs/day3.txt")?;

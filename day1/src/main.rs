@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::num::ParseIntError;
 
-type Result<T> = std::result::Result<T, Box<dyn ::std::error::Error>>;
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 type ParseResult = std::result::Result<Vec<i32>, ParseIntError>;
 
 fn main() -> Result<()> {
