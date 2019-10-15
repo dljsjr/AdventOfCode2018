@@ -1,16 +1,55 @@
 extern crate regex;
 
-use regex::Regex;
+use std::collections::HashMap;
 use std::fs;
+use std::ops::Range;
 use std::str::FromStr;
+
+use regex::Regex;
 
 #[derive(Debug)]
 struct Claim {
     id: usize,
-    x: usize,
-    y: usize,
-    width: usize,
-    height: usize,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+}
+
+impl Claim {
+    fn get_fabric_section_iterator(&self) -> FabricSectionIterator {
+        FabricSectionIterator {
+            x_range: self.x..(self.x + self.width),
+            y_range: self.y..(self.y + self.height),
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
+
+struct FabricSectionIterator {
+    x_range: Range<u32>,
+    y_range: Range<u32>,
+    x: u32,
+    y: u32,
+}
+
+impl Iterator for FabricSectionIterator {
+    type Item = (u32, u32);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.x >= self.x_range.end {
+            self.y += 1;
+            self.x = self.x_range.start;
+        }
+        if self.y >= self.y_range.end {
+            return None;
+        }
+
+        let ret: (u32, u32) = (self.x, self.y);
+        self.x += 1;
+        Some(ret)
+    }
 }
 
 impl FromStr for Claim {
@@ -40,11 +79,28 @@ type Result<T> = std::result::Result<T, Box<dyn ::std::error::Error>>;
 fn main() -> Result<()> {
     let contents = fs::read_to_string("inputs/day3.txt")?;
 
-    if let Some(first_entry) = contents.lines().next() {
-        let claim = Claim::from_str(first_entry)?;
-        println!("Claim: {:#?}", claim);
-        Ok(())
+    let mut contained_points: HashMap<(u32, u32), u32> = HashMap::new();
+
+    if let Ok(claims) = contents
+        .lines()
+        .map(|line| Claim::from_str(line))
+        .collect::<Result<Vec<Claim>>>()
+    {
+        for claim in claims.into_iter() {
+            for section in claim.get_fabric_section_iterator() {
+                *contained_points.entry((section.0, section.1)).or_default() += 1;
+            }
+        }
     } else {
-        Err(From::from("Some sorta problem here y'all"))
+        return Err(From::from("Problem parsing and iterating all claims"));
     }
+
+    let total_overlap_area = contained_points
+        .values()
+        .filter(|&&occurrences| occurrences > 1)
+        .count();
+
+    println!("Total overlap area: {}", total_overlap_area);
+
+    Ok(())
 }
