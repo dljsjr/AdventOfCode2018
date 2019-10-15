@@ -5,7 +5,7 @@ use chrono::NaiveDateTime;
 use regex::Regex;
 use std::cmp::Ordering;
 use std::fs;
-use std::str::FromStr;
+use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Eq)]
 struct GuardEvent {
@@ -124,9 +124,33 @@ fn main() -> Result<()> {
         })
         .collect();
 
-    for entry in entries {
-        println!("Guard number known? {}", entry.guard_known);
+    let mut binned_events: HashMap<u32, Vec<GuardEvent>> = HashMap::new();
+
+    for entry in updated_entries {
+        if !binned_events.contains_key(&entry.guard_number) {
+            binned_events.insert(entry.guard_number, Vec::new());
+        }
+
+        if let Some(vec) = binned_events.get_mut(&entry.guard_number) {
+            vec.push(entry);
+        }
     }
+
+    if let Some(vec) = binned_events.get(&1579) {
+        for event in vec {
+            println!("{:?}", event);
+        }
+    }
+
+//    for (guard_num, events) in binned_events.iter() {
+//        let sleep_events: Vec<&GuardEvent> = events.iter().filter(|&event| event.event_type == GuardEventType::FallAsleep).collect();
+//
+//        println!("Guard {} Sleep events: ", guard_num);
+//
+//        for event in sleep_events {
+//            println!("{:?}", event);
+//        }
+//    }
 
     Ok(())
 }
