@@ -1,0 +1,3 @@
+*.toml eol=lf
+*.rs eol=lf
+Cargo.lock eol=lf
