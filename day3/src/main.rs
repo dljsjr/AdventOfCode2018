@@ -78,23 +78,21 @@ type Result<T> = std::result::Result<T, Box<dyn ::std::error::Error>>;
 
 fn main() -> Result<()> {
     let contents = fs::read_to_string("inputs/day3.txt")?;
-
-    let mut contained_points: HashMap<(u32, u32), u32> = HashMap::new();
-
-    if let Ok(claims) = contents
+    let claims = contents
         .lines()
         .map(|line| Claim::from_str(line))
-        .collect::<Result<Vec<Claim>>>()
-    {
-        for claim in claims.into_iter() {
-            for section in claim.get_fabric_section_iterator() {
-                *contained_points.entry((section.0, section.1)).or_default() += 1;
-            }
-        }
-    } else {
-        return Err(From::from("Problem parsing and iterating all claims"));
-    }
+        .collect::<Result<Vec<Claim>>>()?;
 
+    let contained_points = process_claims(&claims);
+
+    solve_part_1(&contained_points)?;
+
+    solve_part_2(&claims, &contained_points)?;
+
+    Ok(())
+}
+
+fn solve_part_1(contained_points: &HashMap<(u32, u32), u32>) -> Result<()> {
     let total_overlap_area = contained_points
         .values()
         .filter(|&&occurrences| occurrences > 1)
@@ -103,4 +101,30 @@ fn main() -> Result<()> {
     println!("Total overlap area: {}", total_overlap_area);
 
     Ok(())
+}
+
+fn solve_part_2(claims: &Vec<Claim>, contained_points: &HashMap<(u32, u32), u32>) -> Result<()> {
+    for claim in claims {
+        if claim
+            .get_fabric_section_iterator()
+            .all(|point| contained_points[&point] == 1)
+        {
+            println!("Claim {} does not have overlap!", claim.id);
+            return Ok(());
+        }
+    }
+
+    Err(From::from("Could not find any claims with no overlap"))
+}
+
+fn process_claims(claims: &Vec<Claim>) -> HashMap<(u32, u32), u32> {
+    let mut contained_points: HashMap<(u32, u32), u32> = HashMap::new();
+
+    for claim in claims.into_iter() {
+        for section in claim.get_fabric_section_iterator() {
+            *contained_points.entry((section.0, section.1)).or_default() += 1;
+        }
+    }
+
+    contained_points
 }
