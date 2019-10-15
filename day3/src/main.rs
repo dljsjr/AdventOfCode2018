@@ -41,17 +41,10 @@ fn main() -> Result<()> {
     let contents = fs::read_to_string("inputs/day3.txt")?;
 
     if let Some(first_entry) = contents.lines().next() {
-        match Claim::from_str(first_entry) {
-            Ok(claim) => {
-                println!("Claim: {:#?}", claim);
-                Ok(())
-            }
-            Err(e) => {
-                eprintln!("Error: {:?}", e);
-                std::process::exit(1);
-            }
-        }
-    } else {
+        let claim = Claim::from_str(first_entry)?;
+        println!("Claim: {:#?}", claim);
         Ok(())
+    } else {
+        Err(From::from("Some sorta problem here y'all"))
     }
 }
