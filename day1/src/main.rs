@@ -2,24 +2,22 @@ use std::fs;
 use std::num::ParseIntError;
 
 type Result<T> = std::result::Result<T, Box<dyn ::std::error::Error>>;
+type ParseResult = std::result::Result<Vec<i32>, ParseIntError>;
 
 fn main() -> Result<()> {
-    let contents = fs::read_to_string("day1_input.txt")?;
-    match process_input(contents) {
-        Ok(changes) => {
-            let final_freq: i32 = changes.iter().sum();
-            println!("Final frequency: {}", final_freq)
-        },
-        Err(e) => {
-            eprintln!("Error processing input: {:?}", e);
-            std::process::exit(1)
-        },
-    }
-
-    Ok(())
+    process_input("day1_input.txt")
 }
 
-fn process_input(contents: String) -> std::result::Result<Vec<i32>, ParseIntError> {
-
-    contents.lines().map(|line| line.parse::<i32>()).collect()
+fn process_input(filename: &str) -> Result<()> {
+    match fs::read_to_string(filename)?
+        .lines()
+        .map(|line| line.parse::<i32>())
+        .collect::<ParseResult>()
+    {
+        Ok(val) => {
+            println!("Final frequency: {:?}", val.iter().sum::<i32>());
+            Ok(())
+        }
+        Err(e) => Err(From::from(format!("Could not parse input file: {}", e))),
+    }
 }
