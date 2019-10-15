@@ -46,9 +46,8 @@ fn process_input_part_2(filename: &str) -> Result<()> {
 
                     if frequencies.contains(&current_freq) {
                         println!("First doubled frequency: {:?}", current_freq);
-                        return Ok(())
-                    }
-                    else {
+                        return Ok(());
+                    } else {
                         frequencies.insert(current_freq);
                     }
                 }
