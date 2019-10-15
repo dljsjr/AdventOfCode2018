@@ -6,8 +6,8 @@ type Result<T> = std::result::Result<T, Box<dyn ::std::error::Error>>;
 type ParseResult = std::result::Result<Vec<i32>, ParseIntError>;
 
 fn main() -> Result<()> {
-    process_input_part_1("day1_input.txt")?;
-    process_input_part_2("day1_input.txt")?;
+    process_input_part_1("inputs/day1.txt")?;
+    process_input_part_2("inputs/day1.txt")?;
 
     Ok(())
 }

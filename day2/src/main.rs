@@ -3,8 +3,8 @@ use std::fs;
 type Result<T> = std::result::Result<T, Box<dyn ::std::error::Error>>;
 
 fn main() -> Result<()> {
-    process_input_part_1("day2_input.txt")?;
-    process_input_part_2("day2_input.txt")?;
+    process_input_part_1("inputs/day2.txt")?;
+    process_input_part_2("inputs/day2.txt")?;
 
     Ok(())
 }
