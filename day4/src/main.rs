@@ -1,11 +1,15 @@
+#[macro_use]
+extern crate lazy_static;
+
 extern crate chrono;
 extern crate regex;
 
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::fs;
+
 use chrono::NaiveDateTime;
 use regex::Regex;
-use std::cmp::Ordering;
-use std::fs;
-use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Eq)]
 struct GuardEvent {
@@ -23,26 +27,29 @@ enum GuardEventType {
 }
 
 impl GuardEvent {
-    fn from_log_entry(log: &str) -> Result<GuardEvent> {
-        let date_capture = Regex::new(r"\[(?P<date>.*)\].*")?;
+    fn from_log_entry(log_entry: &str) -> Result<GuardEvent> {
+        lazy_static! {
+            static ref DATE_CAPTURE: Regex = Regex::new(r"\[(?P<date>.*)\].*").unwrap();
+            static ref GUARD_NUMBER_CAPTURE: Regex =
+                Regex::new(r".*#(?P<guard_number>[0-9]+)\s").unwrap();
+        }
 
-        let event_type = if log.contains("wakes up") {
+        let event_type = if log_entry.contains("wakes up") {
             GuardEventType::WakeUp
-        } else if log.contains("falls asleep") {
+        } else if log_entry.contains("falls asleep") {
             GuardEventType::FallAsleep
-        } else if log.contains("begins shift") {
+        } else if log_entry.contains("begins shift") {
             GuardEventType::StartShift
         } else {
             return Err(From::from(format!(
                 "Could not determine event type from log entry {}",
-                log
+                log_entry
             )));
         };
 
-        let guard_number_capture = Regex::new(r".*#(?P<guard_number>[0-9]+)\s")?;
         let mut guard_known = false;
 
-        let guard_number = match guard_number_capture.captures(log) {
+        let guard_number = match GUARD_NUMBER_CAPTURE.captures(log_entry) {
             None => 0,
             Some(capture) => {
                 guard_known = true;
@@ -50,7 +57,7 @@ impl GuardEvent {
             }
         };
 
-        if let Some(capture) = date_capture.captures(log) {
+        if let Some(capture) = DATE_CAPTURE.captures(log_entry) {
             let date_string = &capture["date"];
             let time = match NaiveDateTime::parse_from_str(date_string, "%Y-%m-%d %H:%M") {
                 Ok(date_time) => date_time,
@@ -70,7 +77,10 @@ impl GuardEvent {
             });
         }
 
-        Err(From::from(format!("Could not parse log entry {}", log)))
+        Err(From::from(format!(
+            "Could not parse log entry {}",
+            log_entry
+        )))
     }
 
     fn update_guard_number(&self, guard_number: u32) -> GuardEvent {
@@ -102,17 +112,37 @@ impl Ord for GuardEvent {
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
-    let contents = fs::read_to_string("inputs/day4.txt")?;
+    let filename = "inputs/day4.txt";
 
+    let binned_events = process_guard_events(filename)?;
+
+    if let Some(vec) = binned_events.get(&1579) {
+        for event in vec {
+            println!("{:?}", event);
+        }
+    }
+
+    //    for (guard_num, events) in binned_events.iter() {
+    //        let sleep_events: Vec<&GuardEvent> = events.iter().filter(|&event| event.event_type == GuardEventType::FallAsleep).collect();
+    //
+    //        println!("Guard {} Sleep events: ", guard_num);
+    //
+    //        for event in sleep_events {
+    //            println!("{:?}", event);
+    //        }
+    //    }
+
+    Ok(())
+}
+
+fn process_guard_events(filename: &str) -> Result<HashMap<u32, Vec<GuardEvent>>> {
+    let contents = fs::read_to_string(filename)?;
     let mut entries: Vec<GuardEvent> = contents
         .lines()
         .map(|line| GuardEvent::from_log_entry(line))
         .collect::<Result<Vec<GuardEvent>>>()?;
-
     entries.sort_unstable();
-
     let mut guard_number = 0u32;
-
     let updated_entries: Vec<GuardEvent> = entries
         .iter()
         .map(|entry| {
@@ -123,9 +153,7 @@ fn main() -> Result<()> {
             (*entry).update_guard_number(guard_number)
         })
         .collect();
-
     let mut binned_events: HashMap<u32, Vec<GuardEvent>> = HashMap::new();
-
     for entry in updated_entries {
         if !binned_events.contains_key(&entry.guard_number) {
             binned_events.insert(entry.guard_number, Vec::new());
@@ -135,22 +163,5 @@ fn main() -> Result<()> {
             vec.push(entry);
         }
     }
-
-    if let Some(vec) = binned_events.get(&1579) {
-        for event in vec {
-            println!("{:?}", event);
-        }
-    }
-
-//    for (guard_num, events) in binned_events.iter() {
-//        let sleep_events: Vec<&GuardEvent> = events.iter().filter(|&event| event.event_type == GuardEventType::FallAsleep).collect();
-//
-//        println!("Guard {} Sleep events: ", guard_num);
-//
-//        for event in sleep_events {
-//            println!("{:?}", event);
-//        }
-//    }
-
-    Ok(())
+    Ok(binned_events)
 }
