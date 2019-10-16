@@ -16,9 +16,8 @@ fn main() -> Result<()> {
     let filename = "inputs/day4.txt";
 
     let binned_events = process_guard_events(filename)?;
-    let mut guard_sleep_tracker = SleepTracker::new();
 
-    process_sleep_stats_stateful(&binned_events, &mut guard_sleep_tracker);
+    let mut guard_sleep_tracker = process_sleep_stats(&binned_events);
 
     solve_part_1(&mut guard_sleep_tracker);
 
@@ -135,13 +134,13 @@ type SleepTracker = HashMap<u32, SleepStats>;
 
 fn solve_part_1(guard_sleep_tracker: &mut SleepTracker) {
     if let Some((sleepiest_guard_num, stats)) =
-    guard_sleep_tracker
-        .iter()
-        .max_by(|(_, stats), (_, other_stats)| {
-            stats
-                .total_minutes_slept
-                .cmp(&other_stats.total_minutes_slept)
-        })
+        guard_sleep_tracker
+            .iter()
+            .max_by(|(_, stats), (_, other_stats)| {
+                stats
+                    .total_minutes_slept
+                    .cmp(&other_stats.total_minutes_slept)
+            })
     {
         if let Some((sleepiest_min, _freq)) = stats
             .minute_statistics
@@ -158,10 +157,9 @@ fn solve_part_1(guard_sleep_tracker: &mut SleepTracker) {
     }
 }
 
-fn process_sleep_stats_stateful(
-    binned_events: &BinnedEvents,
-    guard_sleep_tracker: &mut SleepTracker,
-) {
+fn process_sleep_stats(binned_events: &BinnedEvents) -> SleepTracker {
+    let mut guard_sleep_tracker = SleepTracker::new();
+
     for (guard_num, events) in binned_events.iter() {
         for (idx, event) in events.iter().enumerate() {
             if let GuardEventType::FallAsleep = event.event_type {
@@ -195,6 +193,8 @@ fn process_sleep_stats_stateful(
             }
         }
     }
+
+    guard_sleep_tracker
 }
 
 fn process_guard_events(filename: &str) -> Result<BinnedEvents> {
