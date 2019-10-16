@@ -220,32 +220,30 @@ fn process_sleep_stats(binned_events: &BinnedEvents) -> SleepTracker {
 
 fn process_guard_events(filename: &str) -> Result<BinnedEvents> {
     let contents = fs::read_to_string(filename)?;
-    let mut entries: Vec<GuardEvent> = contents
+    let mut events: Vec<GuardEvent> = contents
         .lines()
         .map(|line| GuardEvent::from_log_entry(line))
         .collect::<Result<Vec<GuardEvent>>>()?;
 
-    entries.sort_unstable();
+    events.sort_unstable();
 
     let mut guard_number = 0u32;
-    let updated_entries: Vec<GuardEvent> = entries
+    let mut binned_events: BinnedEvents = BinnedEvents::new();
+    events
         .iter()
-        .map(|entry| {
-            if entry.guard_known {
-                guard_number = entry.guard_number;
+        .map(|event| {
+            if event.guard_known {
+                guard_number = event.guard_number;
             }
 
-            (*entry).update_guard_number(guard_number)
+            (*event).update_guard_number(guard_number)
         })
-        .collect();
-
-    let mut binned_events: BinnedEvents = BinnedEvents::new();
-    for entry in updated_entries {
-        binned_events
-            .entry(entry.guard_number)
-            .or_insert_with(Vec::new)
-            .push(entry);
-    }
+        .for_each(|event| {
+            binned_events
+                .entry(event.guard_number)
+                .or_insert_with(Vec::new)
+                .push(event);
+        });
 
     Ok(binned_events)
 }
