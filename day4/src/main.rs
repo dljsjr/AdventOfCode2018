@@ -133,47 +133,52 @@ type BinnedEvents = HashMap<u32, Vec<GuardEvent>>;
 type SleepTracker = HashMap<u32, SleepStats>;
 
 fn solve_part_1(guard_sleep_tracker: &SleepTracker) {
-    if let Some((sleepiest_guard_num, stats)) =
-        guard_sleep_tracker
-            .iter()
-            .max_by(|(_, stats), (_, other_stats)| {
-                stats
-                    .total_minutes_slept
-                    .cmp(&other_stats.total_minutes_slept)
-            })
-    {
-        if let Some((sleepiest_min, _freq)) = stats
-            .minute_statistics
-            .iter()
-            .max_by(|(_, minute), (_, other_minute)| minute.cmp(other_minute))
-        {
+    let mut sleepiest_guard_num = 0u32;
+    guard_sleep_tracker
+        .iter()
+        .max_by(|(_, stats), (_, other_stats)| {
+            stats
+                .total_minutes_slept
+                .cmp(&other_stats.total_minutes_slept)
+        })
+        .and_then(|(guard_num, stats)| {
+            sleepiest_guard_num = *guard_num;
+            stats
+                .minute_statistics
+                .iter()
+                .max_by(|(_, minute), (_, other_minute)| minute.cmp(other_minute))
+        })
+        .and_then(|(sleepiest_min, _freq)| {
             println!(
                 "The sleepiest guard is {}. His sleepiest minute is {}. The computed result is {}.",
                 sleepiest_guard_num,
                 sleepiest_min,
                 sleepiest_guard_num * sleepiest_min
             );
-        }
-    }
+
+            None::<()>
+        });
 }
 
 fn solve_part_2(guard_sleep_tracker: &SleepTracker) {
-    if let Some((guard, stats)) =
-        guard_sleep_tracker
-            .iter()
-            .max_by(|(_, stats), (_, other_stats)| {
-                (*stats.minute_statistics.values().max().unwrap())
-                    .cmp(other_stats.minute_statistics.values().max().unwrap())
-            })
-    {
-        if let Some((minute, _)) = stats
-            .minute_statistics
-            .iter()
-            .max_by(|(_, &freq), (_, &other_freq)| freq.cmp(&other_freq))
-        {
-            println!("The guard with the most frequent sleepy minute is {}. The minute is {}. The computed result is {}", guard, minute, guard * minute);
-        }
-    }
+    let mut sleepy_guard = 0u32;
+    guard_sleep_tracker
+        .iter()
+        .max_by(|(_, stats), (_, other_stats)| {
+            (*stats.minute_statistics.values().max().unwrap())
+                .cmp(other_stats.minute_statistics.values().max().unwrap())
+        })
+        .and_then(|(guard, stats)| {
+            sleepy_guard = *guard;
+            stats
+                .minute_statistics
+                .iter()
+                .max_by(|(_, &freq), (_, &other_freq)| freq.cmp(&other_freq))
+        })
+        .and_then(|(minute, _)| {
+            println!("The guard with the most frequent sleepy minute is {}. The minute is {}. The computed result is {}", sleepy_guard, minute, sleepy_guard * minute);
+            None::<()>
+        });
 }
 
 fn process_sleep_stats(binned_events: &BinnedEvents) -> SleepTracker {
@@ -182,24 +187,29 @@ fn process_sleep_stats(binned_events: &BinnedEvents) -> SleepTracker {
     for (guard_num, events) in binned_events.iter() {
         for (idx, event) in events.iter().enumerate() {
             if let GuardEventType::FallAsleep = event.event_type {
-                if let Some(wakeup_event) = events.get(idx + 1) {
-                    let sleep_event_time = &event.time;
-                    let wake_event_time = &wakeup_event.time;
+                let sleep_event_time = &event.time;
+                let mut duration_minutes = 0u32;
+                events
+                    .get(idx + 1)
+                    .and_then(|wakeup_event| {
+                        let wake_event_time = &wakeup_event.time;
 
-                    let time_difference: Duration = *wake_event_time - *sleep_event_time;
-                    let duration_minutes: u32 = (time_difference.num_seconds() / 60) as u32;
+                        let time_difference: Duration = *wake_event_time - *sleep_event_time;
+                        duration_minutes = (time_difference.num_seconds() / 60) as u32;
 
-                    if !guard_sleep_tracker.contains_key(guard_num) {
-                        guard_sleep_tracker.insert(
-                            *guard_num,
-                            SleepStats {
-                                total_minutes_slept: 0,
-                                minute_statistics: HashMap::new(),
-                            },
-                        );
-                    }
+                        if !guard_sleep_tracker.contains_key(guard_num) {
+                            guard_sleep_tracker.insert(
+                                *guard_num,
+                                SleepStats {
+                                    total_minutes_slept: 0,
+                                    minute_statistics: HashMap::new(),
+                                },
+                            );
+                        }
 
-                    if let Some(stats) = guard_sleep_tracker.get_mut(guard_num) {
+                        guard_sleep_tracker.get_mut(guard_num)
+                    })
+                    .and_then(|stats| {
                         stats.total_minutes_slept += duration_minutes;
 
                         for min in sleep_event_time.minute()
@@ -207,8 +217,9 @@ fn process_sleep_stats(binned_events: &BinnedEvents) -> SleepTracker {
                         {
                             *stats.minute_statistics.entry(min).or_default() += 1;
                         }
-                    }
-                }
+
+                        None::<()>
+                    });
             }
         }
     }
