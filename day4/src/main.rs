@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate lazy_static;
-
 extern crate chrono;
 extern crate regex;
 
@@ -8,8 +7,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs;
 
-use chrono::NaiveDateTime;
-use chrono::{Duration, Timelike};
+use chrono::{Duration, NaiveDateTime, Timelike};
 use regex::Regex;
 
 fn main() -> Result<()> {
