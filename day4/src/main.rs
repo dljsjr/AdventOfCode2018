@@ -21,6 +21,8 @@ fn main() -> Result<()> {
 
     solve_part_1(&mut guard_sleep_tracker);
 
+    solve_part_2(&mut guard_sleep_tracker);
+
     Ok(())
 }
 
@@ -153,6 +155,25 @@ fn solve_part_1(guard_sleep_tracker: &mut SleepTracker) {
                 sleepiest_min,
                 sleepiest_guard_num * sleepiest_min
             );
+        }
+    }
+}
+
+fn solve_part_2(guard_sleep_tracker: &mut SleepTracker) {
+    if let Some((guard, stats)) =
+        guard_sleep_tracker
+            .iter()
+            .max_by(|(_, stats), (_, other_stats)| {
+                (*stats.minute_statistics.values().max().unwrap())
+                    .cmp(other_stats.minute_statistics.values().max().unwrap())
+            })
+    {
+        if let Some((minute, _)) = stats
+            .minute_statistics
+            .iter()
+            .max_by(|(_, &freq), (_, &other_freq)| freq.cmp(&other_freq))
+        {
+            println!("The guard with the most frequent sleepy minute is {}. The minute is {}. The computed result is {}", guard, minute, guard * minute);
         }
     }
 }
