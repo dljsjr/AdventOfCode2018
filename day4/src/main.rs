@@ -8,9 +8,22 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs;
 
-use chrono::Duration;
 use chrono::NaiveDateTime;
+use chrono::{Duration, Timelike};
 use regex::Regex;
+
+fn main() -> Result<()> {
+    let filename = "inputs/day4.txt";
+
+    let binned_events = process_guard_events(filename)?;
+    let mut guard_sleep_tracker = SleepTracker::new();
+
+    process_sleep_stats_stateful(&binned_events, &mut guard_sleep_tracker);
+
+    solve_part_1(&mut guard_sleep_tracker);
+
+    Ok(())
+}
 
 #[derive(Debug, PartialEq, Eq)]
 struct GuardEvent {
@@ -25,6 +38,12 @@ enum GuardEventType {
     StartShift,
     WakeUp,
     FallAsleep,
+}
+
+#[derive(Debug)]
+struct SleepStats {
+    total_minutes_slept: u32,
+    minute_statistics: HashMap<u32, u32>,
 }
 
 impl GuardEvent {
@@ -112,45 +131,37 @@ impl Ord for GuardEvent {
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 type BinnedEvents = HashMap<u32, Vec<GuardEvent>>;
-type SleepTracker = HashMap<u32, f64>;
+type SleepTracker = HashMap<u32, SleepStats>;
 
-fn main() -> Result<()> {
-    let filename = "inputs/day4.txt";
-
-    let binned_events = process_guard_events(filename)?;
-    let mut guard_sleep_tracker = SleepTracker::new();
-
-    let (sleepiest_guard, most_minutes_slept) =
-        find_sleepiest_guard_number(binned_events, &mut guard_sleep_tracker);
-
-    println!(
-        "The sleepiest guard is {}, he slept a total of {} minutes.",
-        sleepiest_guard, most_minutes_slept
-    );
-
-    //    if let Some(vec) = binned_events.get(&1579) {
-    //        for event in vec {
-    //            println!("{:?}", event);
-    //        }
-    //    }
-
-    //    for (guard_num, events) in binned_events.iter() {
-    //        let sleep_events: Vec<&GuardEvent> = events.iter().filter(|&event| event.event_type == GuardEventType::FallAsleep).collect();
-    //
-    //        println!("Guard {} Sleep events: ", guard_num);
-    //
-    //        for event in sleep_events {
-    //            println!("{:?}", event);
-    //        }
-    //    }
-
-    Ok(())
+fn solve_part_1(guard_sleep_tracker: &mut SleepTracker) {
+    if let Some((sleepiest_guard_num, stats)) =
+    guard_sleep_tracker
+        .iter()
+        .max_by(|(_, stats), (_, other_stats)| {
+            stats
+                .total_minutes_slept
+                .cmp(&other_stats.total_minutes_slept)
+        })
+    {
+        if let Some((sleepiest_min, _freq)) = stats
+            .minute_statistics
+            .iter()
+            .max_by(|(_, minute), (_, other_minute)| minute.cmp(other_minute))
+        {
+            println!(
+                "The sleepiest guard is {}. His sleepiest minute is {}. The computed result is {}.",
+                sleepiest_guard_num,
+                sleepiest_min,
+                sleepiest_guard_num * sleepiest_min
+            );
+        }
+    }
 }
 
-fn find_sleepiest_guard_number(
-    binned_events: BinnedEvents,
+fn process_sleep_stats_stateful(
+    binned_events: &BinnedEvents,
     guard_sleep_tracker: &mut SleepTracker,
-) -> (u32, f64) {
+) {
     for (guard_num, events) in binned_events.iter() {
         for (idx, event) in events.iter().enumerate() {
             if let GuardEventType::FallAsleep = event.event_type {
@@ -159,25 +170,31 @@ fn find_sleepiest_guard_number(
                     let wake_event_time = &wakeup_event.time;
 
                     let time_difference: Duration = *wake_event_time - *sleep_event_time;
+                    let duration_minutes: u32 = (time_difference.num_seconds() / 60) as u32;
 
-                    *guard_sleep_tracker.entry(*guard_num).or_default() +=
-                        time_difference.num_seconds() as f64 / 60.0;
+                    if !guard_sleep_tracker.contains_key(guard_num) {
+                        guard_sleep_tracker.insert(
+                            *guard_num,
+                            SleepStats {
+                                total_minutes_slept: 0,
+                                minute_statistics: HashMap::new(),
+                            },
+                        );
+                    }
+
+                    if let Some(stats) = guard_sleep_tracker.get_mut(guard_num) {
+                        stats.total_minutes_slept += duration_minutes;
+
+                        for min in sleep_event_time.minute()
+                            ..(sleep_event_time.minute() + duration_minutes)
+                        {
+                            *stats.minute_statistics.entry(min).or_default() += 1;
+                        }
+                    }
                 }
             }
         }
     }
-
-    let mut sleepiest_guard = 0u32;
-    let mut most_minutes_slept = 0.0f64;
-
-    for (key, value) in guard_sleep_tracker.iter() {
-        most_minutes_slept = most_minutes_slept.max(*value);
-        if *value == most_minutes_slept {
-            sleepiest_guard = *key;
-        }
-    }
-
-    (sleepiest_guard, most_minutes_slept)
 }
 
 fn process_guard_events(filename: &str) -> Result<BinnedEvents> {
