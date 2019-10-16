@@ -8,6 +8,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs;
 
+use chrono::Duration;
 use chrono::NaiveDateTime;
 use regex::Regex;
 
@@ -110,17 +111,28 @@ impl Ord for GuardEvent {
 }
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+type BinnedEvents = HashMap<u32, Vec<GuardEvent>>;
+type SleepTracker = HashMap<u32, f64>;
 
 fn main() -> Result<()> {
     let filename = "inputs/day4.txt";
 
     let binned_events = process_guard_events(filename)?;
+    let mut guard_sleep_tracker = SleepTracker::new();
 
-    if let Some(vec) = binned_events.get(&1579) {
-        for event in vec {
-            println!("{:?}", event);
-        }
-    }
+    let (sleepiest_guard, most_minutes_slept) =
+        find_sleepiest_guard_number(binned_events, &mut guard_sleep_tracker);
+
+    println!(
+        "The sleepiest guard is {}, he slept a total of {} minutes.",
+        sleepiest_guard, most_minutes_slept
+    );
+
+    //    if let Some(vec) = binned_events.get(&1579) {
+    //        for event in vec {
+    //            println!("{:?}", event);
+    //        }
+    //    }
 
     //    for (guard_num, events) in binned_events.iter() {
     //        let sleep_events: Vec<&GuardEvent> = events.iter().filter(|&event| event.event_type == GuardEventType::FallAsleep).collect();
@@ -135,13 +147,48 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn process_guard_events(filename: &str) -> Result<HashMap<u32, Vec<GuardEvent>>> {
+fn find_sleepiest_guard_number(
+    binned_events: BinnedEvents,
+    guard_sleep_tracker: &mut SleepTracker,
+) -> (u32, f64) {
+    for (guard_num, events) in binned_events.iter() {
+        for (idx, event) in events.iter().enumerate() {
+            if let GuardEventType::FallAsleep = event.event_type {
+                if let Some(wakeup_event) = events.get(idx + 1) {
+                    let sleep_event_time = &event.time;
+                    let wake_event_time = &wakeup_event.time;
+
+                    let time_difference: Duration = *wake_event_time - *sleep_event_time;
+
+                    *guard_sleep_tracker.entry(*guard_num).or_default() +=
+                        time_difference.num_seconds() as f64 / 60.0;
+                }
+            }
+        }
+    }
+
+    let mut sleepiest_guard = 0u32;
+    let mut most_minutes_slept = 0.0f64;
+
+    for (key, value) in guard_sleep_tracker.iter() {
+        most_minutes_slept = most_minutes_slept.max(*value);
+        if *value == most_minutes_slept {
+            sleepiest_guard = *key;
+        }
+    }
+
+    (sleepiest_guard, most_minutes_slept)
+}
+
+fn process_guard_events(filename: &str) -> Result<BinnedEvents> {
     let contents = fs::read_to_string(filename)?;
     let mut entries: Vec<GuardEvent> = contents
         .lines()
         .map(|line| GuardEvent::from_log_entry(line))
         .collect::<Result<Vec<GuardEvent>>>()?;
+
     entries.sort_unstable();
+
     let mut guard_number = 0u32;
     let updated_entries: Vec<GuardEvent> = entries
         .iter()
@@ -153,7 +200,8 @@ fn process_guard_events(filename: &str) -> Result<HashMap<u32, Vec<GuardEvent>>>
             (*entry).update_guard_number(guard_number)
         })
         .collect();
-    let mut binned_events: HashMap<u32, Vec<GuardEvent>> = HashMap::new();
+
+    let mut binned_events: BinnedEvents = BinnedEvents::new();
     for entry in updated_entries {
         if !binned_events.contains_key(&entry.guard_number) {
             binned_events.insert(entry.guard_number, Vec::new());
@@ -163,5 +211,6 @@ fn process_guard_events(filename: &str) -> Result<HashMap<u32, Vec<GuardEvent>>>
             vec.push(entry);
         }
     }
+
     Ok(binned_events)
 }
