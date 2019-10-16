@@ -17,11 +17,11 @@ fn main() -> Result<()> {
 
     let binned_events = process_guard_events(filename)?;
 
-    let mut guard_sleep_tracker = process_sleep_stats(&binned_events);
+    let guard_sleep_tracker = process_sleep_stats(&binned_events);
 
-    solve_part_1(&mut guard_sleep_tracker);
+    solve_part_1(&guard_sleep_tracker);
 
-    solve_part_2(&mut guard_sleep_tracker);
+    solve_part_2(&guard_sleep_tracker);
 
     Ok(())
 }
@@ -134,7 +134,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 type BinnedEvents = HashMap<u32, Vec<GuardEvent>>;
 type SleepTracker = HashMap<u32, SleepStats>;
 
-fn solve_part_1(guard_sleep_tracker: &mut SleepTracker) {
+fn solve_part_1(guard_sleep_tracker: &SleepTracker) {
     if let Some((sleepiest_guard_num, stats)) =
         guard_sleep_tracker
             .iter()
@@ -159,7 +159,7 @@ fn solve_part_1(guard_sleep_tracker: &mut SleepTracker) {
     }
 }
 
-fn solve_part_2(guard_sleep_tracker: &mut SleepTracker) {
+fn solve_part_2(guard_sleep_tracker: &SleepTracker) {
     if let Some((guard, stats)) =
         guard_sleep_tracker
             .iter()
