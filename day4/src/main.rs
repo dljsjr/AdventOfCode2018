@@ -241,13 +241,10 @@ fn process_guard_events(filename: &str) -> Result<BinnedEvents> {
 
     let mut binned_events: BinnedEvents = BinnedEvents::new();
     for entry in updated_entries {
-        if !binned_events.contains_key(&entry.guard_number) {
-            binned_events.insert(entry.guard_number, Vec::new());
-        }
-
-        if let Some(vec) = binned_events.get_mut(&entry.guard_number) {
-            vec.push(entry);
-        }
+        binned_events
+            .entry(entry.guard_number)
+            .or_insert_with(Vec::new)
+            .push(entry);
     }
 
     Ok(binned_events)
